@@ -1,8 +1,45 @@
 require 'rubygems'
-require 'fsevents'
+require 'fsevent'
 
 class Beholder
   DEFAULT_RUNNER = 'ruby'
+
+  class Watcher < FSEvent
+    attr_reader :callback, :last_event, :modified_directories
+
+    def on_change(directories)
+      @modified_directories = directories
+      callback.call(modified_files)
+      update_last_event
+    end
+
+    def watch_directories(directories, &block)
+      super(directories)
+      @callback = block
+    end
+
+    def start
+      update_last_event
+      super
+    end
+
+    protected
+
+    def potentially_modified_files
+      Dir.glob(modified_directories.map {|dir| File.join(dir, "**", "*")})
+    end
+
+    def modified_files
+      potentially_modified_files.select do |file|
+        next if File.directory?(file)
+        File.mtime(file) >= last_event || File.atime(file) >= last_event
+      end
+    end
+
+    def update_last_event
+      @last_event = Time.now
+    end
+  end
 
   class << self
     attr_writer :test_types, :possible_treasure_map_locations
@@ -169,11 +206,13 @@ class Beholder
 
   def start
     startup_msg
-    @watcher = FSEvents::Stream.watch(paths_to_watch) do |event|
-      on_change(event.modified_files)
+    @watcher = Watcher.new
+    @watcher.latency = 0.2
+    @watcher.watch_directories(paths_to_watch) do |files|
+      on_change(files)
       puts "\n\nWaiting for changes since #{Time.now}"
     end
-    @watcher.run
+    @watcher.start
   end
 
   def startup_msg

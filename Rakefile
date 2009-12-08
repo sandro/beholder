@@ -14,7 +14,7 @@ begin
     gem.executables = ["beholder"]
     gem.require_path = 'lib'
     gem.files = %w(LICENSE README.md Rakefile) + Dir.glob("{lib,spec}/**/*")
-    gem.add_dependency "fsevents", ">= 0.1.1"
+    gem.add_dependency "ruby-fsevent", "0.2.0"
     gem.add_development_dependency "rspec", ">= 1.2.9"
     gem.add_development_dependency "rr", ">= 0.7.0"
   end
